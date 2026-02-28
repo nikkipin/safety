@@ -7,5 +7,3 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 **Before working on this codebase, you MUST first read and follow the comprehensive documentation located at:**
 
 - [AGENTS.md](AGENTS.md) - Contains essential codebase information, patterns, practices, rules, guidelines and additional instructions. You MUST follow the guidelines in that file!
-
-This standardized documentation provides the quickest way to understand the project structure and development guidelines. Always consult it before performing any operations with the codebase.
