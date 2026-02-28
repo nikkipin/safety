@@ -12,8 +12,7 @@ Safety CLI (v3.8.0b1) by SafetyCLI scans dependencies for known vulnerabilities 
 
 | Task | Command |
 |------|---------|
-| Run all tests | `pytest tests/` (with .venv active) |
-| Run all tests (container) | `hatch run test.py3.9:test` (requires container tooling — `test` env uses `type = "container"`) |
+| Run all tests (local) | `.venv/bin/pytest tests/ -v` (`pytest` is not on PATH — always use the .venv binary; the `test.py3.9` hatch env requires container tooling and won't work locally) |
 | Run single test | `pytest tests/auth/test_enroll.py::TestClass::test_method -v` |
 | Run tests by marker | `pytest -m unit tests/` or `pytest -m integration tests/` |
 | Run tests by name pattern | `pytest -k "test_name_pattern" tests/` |
@@ -88,12 +87,23 @@ Commands wrapped with `@handle_cmd_exception` decorator (`safety/error_handlers.
 
 **CI test matrix**: Python 3.9–3.14, with pydantic and typer/click version variants. Matrix generated from pyproject.toml via `.github/scripts/matrix.py`.
 
+## Testing Pitfalls
+
+- **MagicMock returns truthy for unspecced boolean properties**: When adding a new conditional branch that checks a boolean property on a mocked object (e.g., `if client.has_machine_token:`), **every existing test** that creates a mock of that object will silently enter the new branch — because `MagicMock().any_attr` returns a truthy `MagicMock`, not `False`. You must search for all tests using that mock and explicitly set the property to `False`. This is especially dangerous because tests pass silently — they just test the wrong branch.
+
 ## Code Style
 
 - **Formatter/Linter**: Ruff (using defaults — no ruff config in pyproject.toml)
 - **Type checker**: Pyright (`[tool.pyright]` config scopes `include` to `safety/scan/` only)
 - **Min Python**: 3.9
 - **Commits**: Conventional Commits enforced via commitizen (`<type>(<scope>): <description>`)
+
+## Quality Gates — Mandatory Before Ending a Session
+
+**Run `/review-changes` before every commit.** It runs lint, format, type check, and related tests on changed files. Do not commit or mark work as done without passing. See `.claude/commands/review-changes.md` for full details.
+
+**Skills** (auto-loaded based on context):
+- `/capture-skills` → Run at the end of every session to extract learnings into skills, AGENTS.md, or templates
 
 ## Key Dependencies
 
@@ -112,3 +122,8 @@ Commands wrapped with `@handle_cmd_exception` decorator (`safety/error_handlers.
 - **Version bumping** (`bump.yml`): automated version bump workflow
 - Binary distribution via PyApp (Rust-based) for Linux, macOS, Windows
 - Code signing: cosign/sigstore for binary attestation, Apple notarization (macOS), Azure Trusted Signing (Windows)
+
+## Agent Workflow Learnings
+
+1. **Run `/capture-skills` before closing every session**: Review the session for confusing patterns, novel solutions, high-token-cost explorations, user corrections, or new architectural decisions. Capture them as skill updates, new skills, or AGENTS.md entries. This prevents the team from re-learning the same lessons across sessions.
+
