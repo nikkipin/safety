@@ -2,6 +2,10 @@
 
 This file provides guidance to AI coding agents when working with code in this repository.
 
+For detailed architecture, module guide, data flows, and navigation, see [docs/CODEBASE_MAP.md](docs/CODEBASE_MAP.md).
+
+**IMPORTANT**: If any code change invalidates details in this file or in [docs/CODEBASE_MAP.md](docs/CODEBASE_MAP.md), you **MUST** update them to stay in sync with the code.
+
 ## Project Overview
 
 Safety CLI (v3.8.0b1) by SafetyCLI scans dependencies for known vulnerabilities and licenses. It also includes a package firewall with typosquatting/malicious package detection. Source: `https://github.com/pyupio/safety`.
