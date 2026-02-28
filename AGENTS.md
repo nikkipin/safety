@@ -95,6 +95,13 @@ Commands wrapped with `@handle_cmd_exception` decorator (`safety/error_handlers.
 - **Min Python**: 3.9
 - **Commits**: Conventional Commits enforced via commitizen (`<type>(<scope>): <description>`)
 
+## Quality Gates — Mandatory Before Ending a Session
+
+**Run `/review-changes` before every commit.** It runs lint, format, type check, and related tests on changed files. Do not commit or mark work as done without passing. See `.claude/commands/review-changes.md` for full details.
+
+**Skills** (auto-loaded based on context):
+- `/capture-skills` → Run at the end of every session to extract learnings into skills, AGENTS.md, or templates
+
 ## Key Dependencies
 
 **Core**:
@@ -112,3 +119,7 @@ Commands wrapped with `@handle_cmd_exception` decorator (`safety/error_handlers.
 - **Version bumping** (`bump.yml`): automated version bump workflow
 - Binary distribution via PyApp (Rust-based) for Linux, macOS, Windows
 - Code signing: cosign/sigstore for binary attestation, Apple notarization (macOS), Azure Trusted Signing (Windows)
+
+## Agent Workflow Learnings
+
+1. **Run `/capture-skills` before closing every session**: Review the session for confusing patterns, novel solutions, high-token-cost explorations, user corrections, or new architectural decisions. Capture them as skill updates, new skills, or AGENTS.md entries. This prevents the team from re-learning the same lessons across sessions.
