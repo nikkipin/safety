@@ -95,6 +95,23 @@ Commands wrapped with `@handle_cmd_exception` decorator (`safety/error_handlers.
 - **Min Python**: 3.9
 - **Commits**: Conventional Commits enforced via commitizen (`<type>(<scope>): <description>`)
 
+## Quality Gates — Mandatory Before Ending a Session
+
+**After any code change session, you MUST run `/review-changes` before considering the work done.**
+
+This command mirrors the CI lint job exactly — it finds all changed Python files (staged +
+unstaged vs HEAD) and runs `hatch run lint:all <files>`, which executes:
+1. `ruff check` — lint
+2. `ruff format --check --diff` — formatting
+3. `pyright` — type checking (scoped to `safety/scan/` per `[tool.pyright]` config)
+
+Use `--fix` to auto-apply ruff fixes. Use `--with-tests` to also run related unit tests.
+
+**You own every error on files you touch.** Never dismiss lint/type errors as pre-existing — if
+your changes touch a file, that file must be clean before you commit.
+
+See `.claude/commands/review-changes.md` for full usage.
+
 ## Key Dependencies
 
 **Core**:
