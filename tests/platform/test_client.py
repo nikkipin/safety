@@ -265,6 +265,37 @@ class TestSafetyPlatformClientMachineToken:
         )
         assert client.base_url == "https://api.example.com"
 
+    # -- get_machine_token_for_firewall() --
+
+    @_PATCH_META
+    def test_get_machine_token_for_firewall_returns_token(
+        self, _mock_meta, _mock_probe
+    ):
+        """get_machine_token_for_firewall() returns the token when set."""
+        client = SafetyPlatformClient(
+            base_url="https://api.example.com",
+            tls_config=_make_tls_config(),
+            auth_server_url="https://auth.example.com",
+            openid_config_url="https://auth.example.com/.well-known/openid-configuration",
+            machine_id="machine-001",
+            machine_token="sfmt_abc123",
+        )
+        assert client.get_machine_token_for_firewall() == "sfmt_abc123"
+
+    @_PATCH_META
+    def test_get_machine_token_for_firewall_returns_none_without_token(
+        self, _mock_meta, _mock_probe
+    ):
+        """get_machine_token_for_firewall() returns None when no machine token."""
+        client = SafetyPlatformClient(
+            base_url="https://api.example.com",
+            tls_config=_make_tls_config(),
+            auth_server_url="https://auth.example.com",
+            openid_config_url="https://auth.example.com/.well-known/openid-configuration",
+            api_key="test-api-key",
+        )
+        assert client.get_machine_token_for_firewall() is None
+
 
 @pytest.mark.unit
 @_PATCH_PROBE

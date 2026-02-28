@@ -279,6 +279,10 @@ class SafetyPlatformClient:
         """The machine ID, if using machine token auth."""
         return self._machine_id
 
+    def get_machine_token_for_firewall(self) -> Optional[str]:
+        """Return machine token for constructing firewall auth envelope only."""
+        return self._machine_token
+
     @property
     def token(self) -> Optional["OAuth2Token"]:
         if not isinstance(self._http_client, OAuth2Client):

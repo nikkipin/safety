@@ -23,6 +23,7 @@ class TestIndexCredentials(unittest.TestCase):
         ctx.obj = MagicMock()
         ctx.obj.auth.platform.token = {"access_token": "test_token"}
         ctx.obj.auth.platform.api_key = "test_api_key"
+        ctx.obj.auth.platform.has_machine_token = False
         ctx.obj.project.id = "test_project_id"
 
         result = index_credentials(ctx)
@@ -44,6 +45,7 @@ class TestIndexCredentials(unittest.TestCase):
         ctx.obj = MagicMock()
         ctx.obj.auth.platform.token = None
         ctx.obj.auth.platform.api_key = "test_api_key"
+        ctx.obj.auth.platform.has_machine_token = False
         ctx.obj.project.id = "test_project_id"
 
         result = index_credentials(ctx)
@@ -64,6 +66,7 @@ class TestIndexCredentials(unittest.TestCase):
         ctx.obj = MagicMock()
         ctx.obj.auth.platform.token = {"access_token": "test_token"}
         ctx.obj.auth.platform.api_key = None
+        ctx.obj.auth.platform.has_machine_token = False
         ctx.obj.project.id = "test_project_id"
 
         result = index_credentials(ctx)
@@ -107,6 +110,7 @@ class TestIndexCredentials(unittest.TestCase):
         ctx.obj = MagicMock()
         ctx.obj.auth.platform.token = {"access_token": "test_token"}
         ctx.obj.auth.platform.api_key = "test_api_key"
+        ctx.obj.auth.platform.has_machine_token = False
         ctx.obj.project = None
 
         result = index_credentials(ctx)
@@ -129,6 +133,7 @@ class TestIndexCredentials(unittest.TestCase):
         ctx.obj = MagicMock()
         ctx.obj.auth.platform.token = {"access_token": "test_token"}
         ctx.obj.auth.platform.api_key = "test_api_key"
+        ctx.obj.auth.platform.has_machine_token = False
         ctx.obj.project.id = "test_project_id"
 
         result = index_credentials(ctx)
@@ -147,6 +152,136 @@ class TestIndexCredentials(unittest.TestCase):
         ).decode("utf-8")
 
         self.assertEqual(result, expected_encoded)
+
+    def test_index_credentials_with_machine_token_auth(self):
+        """Machine token auth produces v2.0 envelope with machine fields."""
+        ctx = MagicMock(spec=typer.Context)
+        ctx.obj = MagicMock()
+        ctx.obj.auth.platform.has_machine_token = True
+        ctx.obj.auth.platform.machine_id = "test-machine-uuid"
+        ctx.obj.auth.platform.get_machine_token_for_firewall.return_value = (
+            "sfmt_test_token"
+        )
+        ctx.obj.project.id = "test_project_id"
+
+        result = index_credentials(ctx)
+        decoded = json.loads(
+            base64.urlsafe_b64decode(result.encode("utf-8")).decode("utf-8")
+        )
+
+        self.assertEqual(decoded["version"], "2.0")
+        self.assertEqual(decoded["machine_id"], "test-machine-uuid")
+        self.assertEqual(decoded["machine_token"], "sfmt_test_token")
+        self.assertEqual(decoded["project_id"], "test_project_id")
+
+    def test_index_credentials_machine_token_version_is_2(self):
+        """Machine token envelope version field is '2.0'."""
+        ctx = MagicMock(spec=typer.Context)
+        ctx.obj = MagicMock()
+        ctx.obj.auth.platform.has_machine_token = True
+        ctx.obj.auth.platform.machine_id = "machine-123"
+        ctx.obj.auth.platform.get_machine_token_for_firewall.return_value = "sfmt_abc"
+        ctx.obj.project.id = "proj"
+
+        result = index_credentials(ctx)
+        decoded = json.loads(
+            base64.urlsafe_b64decode(result.encode("utf-8")).decode("utf-8")
+        )
+
+        self.assertEqual(decoded["version"], "2.0")
+
+    def test_index_credentials_machine_token_excludes_user_fields(self):
+        """v2.0 envelope must NOT contain access_token or api_key keys."""
+        ctx = MagicMock(spec=typer.Context)
+        ctx.obj = MagicMock()
+        ctx.obj.auth.platform.has_machine_token = True
+        ctx.obj.auth.platform.machine_id = "machine-123"
+        ctx.obj.auth.platform.get_machine_token_for_firewall.return_value = "sfmt_abc"
+        ctx.obj.project.id = "proj"
+
+        result = index_credentials(ctx)
+        decoded = json.loads(
+            base64.urlsafe_b64decode(result.encode("utf-8")).decode("utf-8")
+        )
+
+        self.assertNotIn("access_token", decoded)
+        self.assertNotIn("api_key", decoded)
+        self.assertNotIn("org_slug", decoded)
+
+    def test_index_credentials_machine_token_with_no_project(self):
+        """Machine token v2.0 envelope handles project = None."""
+        ctx = MagicMock(spec=typer.Context)
+        ctx.obj = MagicMock()
+        ctx.obj.auth.platform.has_machine_token = True
+        ctx.obj.auth.platform.machine_id = "machine-123"
+        ctx.obj.auth.platform.get_machine_token_for_firewall.return_value = "sfmt_abc"
+        ctx.obj.project = None
+
+        result = index_credentials(ctx)
+        decoded = json.loads(
+            base64.urlsafe_b64decode(result.encode("utf-8")).decode("utf-8")
+        )
+
+        self.assertEqual(decoded["version"], "2.0")
+        self.assertEqual(decoded["machine_id"], "machine-123")
+        self.assertEqual(decoded["machine_token"], "sfmt_abc")
+        self.assertIsNone(decoded["project_id"])
+
+    def test_index_credentials_machine_token_true_but_token_returns_none(self):
+        """When has_machine_token is True but token is None, falls back to v1.0."""
+        ctx = MagicMock(spec=typer.Context)
+        ctx.obj = MagicMock()
+        ctx.obj.auth.platform.has_machine_token = True
+        ctx.obj.auth.platform.machine_id = "machine-123"
+        ctx.obj.auth.platform.get_machine_token_for_firewall.return_value = None
+        ctx.obj.project.id = "proj"
+
+        result = index_credentials(ctx)
+        decoded = json.loads(
+            base64.urlsafe_b64decode(result.encode("utf-8")).decode("utf-8")
+        )
+
+        # Falls through to v1.0 because machine_token is None
+        self.assertEqual(decoded["version"], "1.0")
+        self.assertNotIn("machine_token", decoded)
+        self.assertNotIn("machine_id", decoded)
+
+    def test_index_credentials_oauth2_no_machine_token_key(self):
+        """OAuth2 v1.0 envelope must NOT contain machine_token key."""
+        ctx = MagicMock(spec=typer.Context)
+        ctx.obj = MagicMock()
+        ctx.obj.auth.platform.has_machine_token = False
+        ctx.obj.auth.platform.token = {"access_token": "jwt_token"}
+        ctx.obj.auth.platform.api_key = None
+        ctx.obj.project.id = "proj"
+
+        result = index_credentials(ctx)
+        decoded = json.loads(
+            base64.urlsafe_b64decode(result.encode("utf-8")).decode("utf-8")
+        )
+
+        self.assertEqual(decoded["version"], "1.0")
+        self.assertNotIn("machine_token", decoded)
+        self.assertNotIn("machine_id", decoded)
+
+    def test_index_credentials_api_key_no_machine_token_key(self):
+        """API key v1.0 envelope must NOT contain machine_token key."""
+        ctx = MagicMock(spec=typer.Context)
+        ctx.obj = MagicMock()
+        ctx.obj.auth.platform.has_machine_token = False
+        ctx.obj.auth.platform.token = None
+        ctx.obj.auth.platform.api_key = "key_123"
+        ctx.obj.project.id = "proj"
+
+        result = index_credentials(ctx)
+        decoded = json.loads(
+            base64.urlsafe_b64decode(result.encode("utf-8")).decode("utf-8")
+        )
+
+        self.assertEqual(decoded["version"], "1.0")
+        self.assertEqual(decoded["api_key"], "key_123")
+        self.assertNotIn("machine_token", decoded)
+        self.assertNotIn("machine_id", decoded)
 
 
 @pytest.mark.unit
